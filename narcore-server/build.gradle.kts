@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.ktor)
     application
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.ksp)
 }
 
 val versionNumber = 1
@@ -50,6 +51,9 @@ dependencies {
     implementation(libs.kotlinx.html.jvm)
     implementation(libs.javax.mail)
     implementation(libs.reflections)
+
+    implementation(project(":compiler-plugins"))
+    ksp(project(":compiler-plugins"))
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.junit.jupiter.api)

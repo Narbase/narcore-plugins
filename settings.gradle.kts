@@ -12,6 +12,9 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
 
 dependencyResolutionManagement {
     repositories {
@@ -27,4 +30,4 @@ dependencyResolutionManagement {
 include(":narcore-server")
 include(":narcore-web")
 include(":dto-web")
-
+include("compiler-plugins")
