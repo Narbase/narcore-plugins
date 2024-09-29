@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+    implementation(libs.exposed.core)
     implementation("com.google.devtools.ksp:symbol-processing-api:2.0.0-1.0.24")
 
     testImplementation(kotlin("test"))

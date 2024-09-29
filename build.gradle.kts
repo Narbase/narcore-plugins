@@ -20,7 +20,7 @@ allprojects {
                 freeCompilerArgs.addAll(
                     "-Xcontext-receivers",
                     "-Xexpect-actual-classes",
-                    "-Xjdk-release=$javaVersion",
+//                    "-Xjdk-release=$javaVersion",
                 )
 
 

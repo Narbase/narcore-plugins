@@ -3,6 +3,7 @@ package com.narbase.narcore.data.tables
 
 import com.narbase.narcore.data.columntypes.dateTimeWithoutTimezone
 import com.narbase.narcore.data.columntypes.enum
+import com.narbase.narcore.data.columntypes.jsonColumn
 import com.narbase.narcore.dto.common.enums.SmsMessageStatus
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.Column
@@ -48,7 +49,7 @@ object UsersTable : UUIDTable("staff"), LoggedTable, DeletableTable {
 
 object DeviceTokensTable : UUIDTable("device_tokens") {
     val token: Column<String> = text("token").uniqueIndex()
-    val clientId = reference("client_id", ClientsTable)
+    val clientId = reference("client_id", ClientsTable).nullable()
     val createdOn = createdOnColumn()
 }
 
@@ -61,5 +62,10 @@ object SmsRecordTable : LoggedTable, UUIDTable("sms_record") {
     val message = text("message")
     val phones = array<String>("phones")
     val status = enum("status", SmsMessageStatus::class)
+    val config = jsonColumn<Config<Map<String, Int>>>("config")
     override val createdOn = createdOnColumn()
 }
+
+data class Config<ConfigType>(
+    val param: ConfigType
+)

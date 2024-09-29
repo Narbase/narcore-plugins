@@ -1,4 +1,4 @@
-package org.example
+package com.narbase.narcore.main
 
 fun main() {
     println("Hello World!")
