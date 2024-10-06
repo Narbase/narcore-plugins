@@ -1,15 +1,28 @@
 package com.narbase.narcore.main
 
+import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.narbase.narcore.main.models.DBTable
+import com.narbase.narcore.main.models.DBTableProperty
+import com.narbase.narcore.main.models.generateDaoFile
+import com.narbase.narcore.main.models.generateDtoFile
 
-class DBTableProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) : SymbolProcessor {
+class DBTableProcessor(val options: Map<String, String>, val codeGenerator: CodeGenerator, val logger: KSPLogger) :
+    SymbolProcessor {
 
+    @OptIn(KspExperimental::class)
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val uuidTableKsName = resolver.getKSNameFromString(UUID_TABLE_FULL_QUALIFIER)
-        val symbols = resolver.getAllFiles().flatMap { it.declarations }
+        val symbols = resolver.getAllFiles()
+            .flatMap { it.declarations }
+        val commonModulePackages = getCommonModulePackagesFromOptions(
+            options["commonModulePackages"]
+                ?: throw IllegalArgumentException("commonModulePackages option cannot be null")
+        )
+        val commonModuleSymbols = commonModulePackages.flatMap { resolver.getDeclarationsFromPackage(it) }
         val classDeclarations = symbols.filterIsInstance<KSClassDeclaration>()
         val tables = classDeclarations
             .filter { ksClassDeclaration ->
@@ -29,9 +42,11 @@ class DBTableProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) 
             )
             logger.newLine()
             try {
-                val commonImports = getTablesUtilsImports(classDeclarations, dbTable.isDeletable)
-                dbTable.generateDaoFile(logger, codeGenerator, commonImports)
-            } catch (_: Exception) {
+                val commonImports = getTablesCommonImports(classDeclarations, dbTable.isDeletable)
+                val daoFile = generateDaoFile(dbTable, logger, codeGenerator, commonImports)
+                generateDtoFile(daoFile.model, true, setOf(), logger, codeGenerator, commonModuleSymbols)
+            } catch (e: Error) {
+                e.printStackTrace()
             }
             logger.newLine()
         }
@@ -56,7 +71,7 @@ class DBTableProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) 
             }
     }
 
-    private fun getTablesUtilsImports(
+    private fun getTablesCommonImports(
         classDeclarations: Sequence<KSClassDeclaration>,
         isTableDeletable: Boolean
     ): Set<String> {
@@ -87,8 +102,14 @@ class DBTableProcessor(val codeGenerator: CodeGenerator, val logger: KSPLogger) 
     }
 }
 
+private fun getCommonModulePackagesFromOptions(commonModulePackagesOption: String): Set<String> {
+    return commonModulePackagesOption.split(";")
+        .map { it.substringAfter("commonMain/kotlin/").replace("/", ".") }
+        .toSet()
+}
+
 class DBTableProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-        return DBTableProcessor(environment.codeGenerator, environment.logger)
+        return DBTableProcessor(environment.options, environment.codeGenerator, environment.logger)
     }
 }

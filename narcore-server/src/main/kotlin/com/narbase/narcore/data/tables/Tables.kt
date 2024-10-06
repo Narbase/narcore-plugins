@@ -56,6 +56,7 @@ object DeviceTokensTable : UUIDTable("device_tokens") {
 object AppsConfigTable : UUIDTable("app_config") {
     val permissiveUserCode = integer("permissive_user_code")
     val minimumUserCode = integer("minimum_user_code")
+    val config = jsonColumn<Config<Map<String, Int>>>("config")
 }
 
 object SmsRecordTable : LoggedTable, UUIDTable("sms_record") {
