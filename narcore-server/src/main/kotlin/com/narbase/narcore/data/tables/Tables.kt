@@ -64,6 +64,7 @@ object SmsRecordTable : LoggedTable, UUIDTable("sms_record") {
     val phones = array<String>("phones")
     val status = enum("status", SmsMessageStatus::class)
     val config = jsonColumn<Config<Map<String, Int>>>("config")
+    val long = long("long")
     override val createdOn = createdOnColumn()
 }
 

@@ -5,16 +5,28 @@ import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.narbase.narcore.main.models.DBTable
-import com.narbase.narcore.main.models.DBTableProperty
-import com.narbase.narcore.main.models.generateDaoFile
-import com.narbase.narcore.main.models.generateDtoFile
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.narbase.narcore.main.models.*
 
 class DBTableProcessor(val options: Map<String, String>, val codeGenerator: CodeGenerator, val logger: KSPLogger) :
     SymbolProcessor {
 
     @OptIn(KspExperimental::class)
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        CodeGenerationSettings.rootProjectName =
+            options["rootProjectName"] ?: throw IllegalArgumentException("commonModulePackages option cannot be null")
+        CodeGenerationSettings.setDestinationDaosPackage(
+            options["destinationDaosPath"]
+                ?: throw IllegalArgumentException("destinationDaosPath option cannot be null")
+        )
+        CodeGenerationSettings.setDestinationDtosPackage(
+            options["destinationDtosPath"]
+                ?: throw IllegalArgumentException("destinationDtosPath option cannot be null")
+        )
+        CodeGenerationSettings.setDestinationConvertorsPackage(
+            options["destinationConvertorsPath"]
+                ?: throw IllegalArgumentException("destinationConvertorsPath option cannot be null")
+        )
         val uuidTableKsName = resolver.getKSNameFromString(UUID_TABLE_FULL_QUALIFIER)
         val symbols = resolver.getAllFiles()
             .flatMap { it.declarations }
@@ -23,7 +35,8 @@ class DBTableProcessor(val options: Map<String, String>, val codeGenerator: Code
                 ?: throw IllegalArgumentException("commonModulePackages option cannot be null")
         )
         val commonModuleSymbols = commonModulePackages.flatMap { resolver.getDeclarationsFromPackage(it) }
-        val classDeclarations = symbols.filterIsInstance<KSClassDeclaration>()
+        val functionDeclarations = (commonModuleSymbols + symbols).filterIsInstance<KSFunctionDeclaration>()
+        val classDeclarations = (commonModuleSymbols + symbols).filterIsInstance<KSClassDeclaration>()
         val tables = classDeclarations
             .filter { ksClassDeclaration ->
                 ksClassDeclaration.superTypes
@@ -44,8 +57,9 @@ class DBTableProcessor(val options: Map<String, String>, val codeGenerator: Code
             try {
                 val commonImports = getTablesCommonImports(classDeclarations, dbTable.isDeletable)
                 val daoFile = generateDaoFile(dbTable, logger, codeGenerator, commonImports)
-                generateDtoFile(daoFile.model, true, setOf(), logger, codeGenerator, commonModuleSymbols)
-            } catch (e: Error) {
+                val dtoFile = generateDtoFile(daoFile.model, true, setOf(), logger, codeGenerator, commonModuleSymbols)
+                generateConvertorFile(daoFile.model, dtoFile.dto, true, setOf(), logger, codeGenerator, classDeclarations, functionDeclarations)
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
             logger.newLine()
@@ -72,7 +86,7 @@ class DBTableProcessor(val options: Map<String, String>, val codeGenerator: Code
     }
 
     private fun getTablesCommonImports(
-        classDeclarations: Sequence<KSClassDeclaration>,
+        classDeclarations: List<KSClassDeclaration>,
         isTableDeletable: Boolean
     ): Set<String> {
         val tableUtilsClassesList = listOf(MODEL_WITH_ID_CLASS_NAME).let {

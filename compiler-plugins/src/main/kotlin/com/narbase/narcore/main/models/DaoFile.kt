@@ -23,6 +23,7 @@ fun generateDaoFile(
     val modelName = tableName.getModelName()
     val daoName = tableName.replace("Table", "Dao")
     val packageName = getDaoPackageName(tableName, tablePackage)
+
     codeGenerator.createNewFile(
         dependencies = Dependencies(false),
         packageName = "daos/$packageName",
@@ -39,11 +40,16 @@ fun generateDaoFile(
                 }
             }
         }
+        os.appendLine("package ${CodeGenerationSettings.getDestinationDaosPackage()}$packageName".replace("/", "."))
+        logger.warn("package ${CodeGenerationSettings.getDestinationDaosPackage()}$packageName".replace("/", "."))
+        os.appendLine()
+        logger.warn("")
         imports.forEach {
             os.appendLine(it)
             logger.warn(it)
         }
         val model = DBTableModel(modelName, packageName, table.properties)
+        CodeGenerationSettings.addGeneratedModel(model)
         os.appendLine()
         logger.newLine()
         generateModel(model, logger, os)

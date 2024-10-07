@@ -38,3 +38,8 @@ fun OutputStream.appendLine(str: String = "") {
 fun OutputStream.appendLineWithIndent(str: String = "", levels: Int = 1) {
     appendText("\t".repeat(levels) + str + System.lineSeparator())
 }
+
+fun Collection<String>.contains(str: String, ignoreCase: Boolean = false): Boolean {
+
+    return any { it.equals(str, ignoreCase) }
+}

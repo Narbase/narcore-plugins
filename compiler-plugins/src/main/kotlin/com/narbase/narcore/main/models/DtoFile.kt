@@ -33,6 +33,9 @@ fun generateDtoFile(
 ): DtoFile {
     val dtoName = "${model.modelName}Dto"
     val packageName = getDtoPackageName(dtoName, model.modelPackage)
+    if (CodeGenerationSettings.hasGeneratedDto(dtoName)) return CodeGenerationSettings.getGeneratedDto(dtoName)
+        ?: throw IllegalArgumentException("DtoFile has not been generated")
+
     codeGenerator.createNewFile(
         dependencies = Dependencies(false),
         packageName = "dtos/$packageName",
@@ -64,6 +67,11 @@ fun generateDtoFile(
             }
         }
         logger.warn("$dtoName imports:")
+        logger.warn("packageName: $packageName")
+        os.appendLine("package ${CodeGenerationSettings.getDestinationDtosPackage()}$packageName".replace("/", "."))
+        logger.warn("package ${CodeGenerationSettings.getDestinationDtosPackage()}$packageName".replace("/", "."))
+        os.appendLine()
+        logger.warn("")
         imports.forEach {
             os.appendLine(it)
             logger.warn(it)
@@ -73,7 +81,7 @@ fun generateDtoFile(
         generateDto(model, parentTypeParameters, isTableModel, logger, os)
         os.appendLine()
         logger.newLine()
-        return DtoFile(
+        val dto = DtoFile(
             imports = imports,
             DBTableDto(
                 dtoName = dtoName,
@@ -81,6 +89,8 @@ fun generateDtoFile(
                 listOf()
             )
         )
+        CodeGenerationSettings.addGeneratedDto(dto)
+        return dto
     }
 }
 
@@ -127,6 +137,16 @@ fun generateDtoImport(
             importsSet.add(import)
         }
 
+        "EntityID" -> {
+            val dtoDeclaration =
+                commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "StringUUID" }
+            val import = generateImport(
+                dtoDeclaration?.qualifiedName
+                    ?: throw IllegalArgumentException("declaration qualified name cannot be null")
+            )
+            importsSet.add(import)
+        }
+
         "Long" -> {
             val dtoDeclaration =
                 commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "KmmLong" }
@@ -163,7 +183,7 @@ fun generateDtoImport(
                         ?: throw IllegalArgumentException("declaration qualified name cannot be null")
                 )
             } else {
-                if (qualifier.contains("com.narbase.narcore") || qualifier.contains("dtos")) {
+                if (qualifier.contains(CodeGenerationSettings.rootProjectName)) {
                     if (ksType.declaration.closestClassDeclaration()?.classKind == ClassKind.ENUM_CLASS) {
                         generateImport(qualifier, ksType)
                         val enumDtoDeclaration =
@@ -192,7 +212,7 @@ fun generateDtoImport(
                                 codeGenerator,
                                 commonModuleDeclarations
                             ).dto
-                            generateImport("${dto.dtoPackage}.${dto.dtoName}")
+                            generateImport("${CodeGenerationSettings.getDestinationDtosPackage()}${dto.dtoPackage}.${dto.dtoName}")
                         } else {
                             ""
                         }
@@ -236,7 +256,7 @@ fun generateDto(
             logger.withIndent("val ${it.name}: ${it.ksType.getTypeArgument().replace("UUID", "StringUUID")},")
         } else {
             logger.warn("%%% ${it.ksType}")
-            os.appendLineWithIndent("val ${it.name}: ${it.ksType.replaceModelTypeWithDtoType(logger, typeParameters)},")
+            os.appendLineWithIndent("val ${it.name}: ${it.ksType.mapModelTypeToDtoType(logger, typeParameters)},")
             logger.withIndent("val ${it.name}: ${it.ksType},")
         }
     }
@@ -245,21 +265,21 @@ fun generateDto(
     return ""
 }
 
-private fun KSType.replaceModelTypeWithDtoType(logger: KSPLogger, typeParameters: Set<String>): String {
+private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters: Set<String>): String {
     val arguments = this.arguments
     val argumentsDtos = mutableSetOf<String>()
     if (arguments.isNotEmpty()) {
         arguments.forEach {
             val resolvedKsType =
                 it.type?.resolve() ?: throw IllegalArgumentException("property ksType name cannot be null")
-            argumentsDtos.add(resolvedKsType.replaceModelTypeWithDtoType(logger, typeParameters))
+            argumentsDtos.add(resolvedKsType.mapModelTypeToDtoType(logger, parentTypeParameters))
         }
     }
     return if (this.toString().contains("List")) {
         if (argumentsDtos.isNotEmpty()) {
             this.toString().replace("List", "Array").let {
                 val arguments = it.substringAfter("<").substringBeforeLast(">")
-                it.replace(arguments, argumentsDtos.toString().replace("[", "").replace("]", ""))
+                it.replace(arguments, argumentsDtos.joinToString(","))
             }
         } else {
             this.toString().replace("List", "Array")
@@ -274,20 +294,15 @@ private fun KSType.replaceModelTypeWithDtoType(logger: KSPLogger, typeParameters
         } else {
             val qualifier = this.declaration.qualifiedName?.getQualifier()
                 ?: throw IllegalArgumentException("qualifier cannot be null")
-            if (qualifier.contains("com.narbase.narcore") || qualifier.contains("dtos")) {
+            if (qualifier.contains(CodeGenerationSettings.rootProjectName)) {
                 if (argumentsDtos.isNotEmpty()) {
-                    logger.warn("new param: ${this}Dto".let {
-                        val arguments = it.substringAfter("<").substringBeforeLast(">")
-                        it.replace(arguments, argumentsDtos.toString().replace("[", "").replace("]", ""))
-                    }
-                    )
                     this.toString().let {
                         val arguments = it.substringAfter("<").substringBeforeLast(">")
-                        val name = it.replace(arguments, argumentsDtos.toString().replace("[", "").replace("]", ""))
+                        val name = it.replace(arguments, argumentsDtos.joinToString(","))
                         name.replaceBefore("<", "${it.substringBefore("<")}Dto")
                     }
                 } else {
-                    if (this.toString() in typeParameters) {
+                    if (this.toString() in parentTypeParameters) {
                         this.toString()
                     } else {
                         "${this}Dto"
@@ -305,22 +320,19 @@ private fun KSClassDeclaration.getProperties(): Sequence<DBTableProperty> {
         .map { property ->
             val propertyName = property.qualifiedName?.getShortName()
             val resolvedProperty = property.type.resolve()
-            val resolvedPropertyTypeQualifier = resolvedProperty?.declaration?.qualifiedName?.getQualifier()
+            val resolvedPropertyTypeQualifier = resolvedProperty.declaration.qualifiedName?.getQualifier()
             DBTableProperty(
                 name = propertyName ?: throw IllegalArgumentException("property name cannot be null"),
-                ksType = resolvedProperty
-                    ?: throw IllegalArgumentException("property ksType name cannot be null"),
+                ksType = resolvedProperty,
                 qualifier = resolvedPropertyTypeQualifier
                     ?: throw IllegalArgumentException("property qualifier cannot be null")
             )
         }
 }
 
-
-fun getDtoPackageName(dtoName: String, modelPackage: String): String {
-//    return modelPackage
-    return if (modelPackage.substringAfter("data.") != "") {
-        modelPackage.substringAfter("data.")
+private fun getDtoPackageName(dtoName: String, modelPackage: String): String {
+    return if (modelPackage.substringAfter("data") != modelPackage) {
+        modelPackage.substringAfter("data")
     } else {
         modelPackage
     }
