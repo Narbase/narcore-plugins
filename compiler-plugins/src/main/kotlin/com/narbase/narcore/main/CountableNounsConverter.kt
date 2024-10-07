@@ -3,7 +3,7 @@ package com.narbase.narcore.main
 import java.io.File
 
 object CountableNounsConverter {
-    private val nounsFile = File("/home/khalid-elkhidir/work/narcore-kunafa/compiler-plugins/src/main/resources/noun.csv")
+    private val nounsFile = File("${CodeGenerationSettings.compilerPluginsProjectRootPath}/src/main/resources/noun.csv")
     private val pluralToSingular = mutableMapOf<String, String>()
 
     fun getSingularForNoun(noun: String): String {
@@ -20,9 +20,4 @@ object CountableNounsConverter {
             }
         }
     }
-}
-
-fun main() {
-    val pluralTestNoun = "Roles"
-    println(CountableNounsConverter.getSingularForNoun(pluralTestNoun))
 }

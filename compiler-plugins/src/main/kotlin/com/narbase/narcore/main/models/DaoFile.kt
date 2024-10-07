@@ -101,13 +101,14 @@ private fun generateDao(
     os.appendLineWithIndent("id = row[table.id].value,", 3)
     logger.withIndent("id = row[table.id].value,", 3)
     properties.forEach { property ->
-        if (property.name == "isDeleted") {
-        } else if (property.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
-            os.appendLineWithIndent("${property.name} = row[table.${property.name}].value,", 3)
-            logger.withIndent("${property.name} = row[table.${property.name}].value,", 3)
-        } else {
-            os.appendLineWithIndent("${property.name} = row[table.${property.name}],", 3)
-            logger.withIndent("${property.name} = row[table.${property.name}],", 3)
+        if (property.name != "isDeleted") {
+            if (property.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
+                os.appendLineWithIndent("${property.name} = row[table.${property.name}].value,", 3)
+                logger.withIndent("${property.name} = row[table.${property.name}].value,", 3)
+            } else {
+                os.appendLineWithIndent("${property.name} = row[table.${property.name}],", 3)
+                logger.withIndent("${property.name} = row[table.${property.name}],", 3)
+            }
         }
     }
     os.appendLineWithIndent(")", 2)
@@ -152,7 +153,7 @@ fun generateDaoImport(qualifier: String, ksType: KSType, logger: KSPLogger): Set
 fun getDaoPackageName(tableName: String, tablePackage: String): String {
     val daoName = tableName.replace("Table", "").lowercase()
     tablePackage.substringAfter("tables").lowercase().replace(".", "/").let {
-        if (it.endsWith(daoName)) return "$it"
+        if (it.endsWith(daoName)) return it
         else return "$it/$daoName"
     }
 }

@@ -172,6 +172,7 @@ tasks.register("generateDaos") {
         arg("destinationDaosPath", destinationDaosPath)
         arg("destinationDtosPath", destinationDtosPath)
         arg("destinationConvertorsPath", destinationConvertorsPath)
+        arg("compilerPluginsRootPath", kspConfig.compilerPluginsPath)
     }
 
     dependsOn("getCommonModulePackages")
@@ -199,6 +200,7 @@ codeGeneration {
     destinationConvertorsRelativePath = "data/conversions"
     sourceConvertorsRelativePath = "conversions"
     dtoWebPath = projects.dtoWeb.dependencyProject.projectDir.path
+    compilerPluginsPath = projects.compilerPlugins.dependencyProject.projectDir.path
     shouldOverwrite = true
 }
 
@@ -211,6 +213,7 @@ class KSPConfig {
     lateinit var destinationConvertorsRelativePath: String
     lateinit var sourceConvertorsRelativePath: String
     lateinit var dtoWebPath: String
+    lateinit var compilerPluginsPath: String
     var shouldOverwrite: Boolean = false
 
     companion object {

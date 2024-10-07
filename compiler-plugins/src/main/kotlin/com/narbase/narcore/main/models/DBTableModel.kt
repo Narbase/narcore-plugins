@@ -20,16 +20,17 @@ fun generateModel(
     os.appendLineWithIndent("override val id: UUID?,")
     logger.withIndent("override val id: UUID?,")
     model.modelProperties.forEach {
-        if (it.name == "isDeleted") {
-        } else if (it.name == "createdOn") {
-            os.appendLineWithIndent("val ${it.name}: ${it.ksType}?,")
-            logger.withIndent("val ${it.name}: ${it.ksType}?,")
-        } else if (it.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
-            os.appendLineWithIndent("val ${it.name}: ${it.ksType.getTypeArgument()},")
-            logger.withIndent("val ${it.name}: ${it.ksType.getTypeArgument()},")
-        } else {
-            os.appendLineWithIndent("val ${it.name}: ${it.ksType},")
-            logger.withIndent("val ${it.name}: ${it.ksType},")
+        if (it.name != "isDeleted") {
+            if (it.name == "createdOn") {
+                os.appendLineWithIndent("val ${it.name}: ${it.ksType}?,")
+                logger.withIndent("val ${it.name}: ${it.ksType}?,")
+            } else if (it.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
+                os.appendLineWithIndent("val ${it.name}: ${it.ksType.getTypeArgument()},")
+                logger.withIndent("val ${it.name}: ${it.ksType.getTypeArgument()},")
+            } else {
+                os.appendLineWithIndent("val ${it.name}: ${it.ksType},")
+                logger.withIndent("val ${it.name}: ${it.ksType},")
+            }
         }
     }
     os.appendLine(") : ModelWithId<UUID>")
@@ -39,8 +40,8 @@ fun generateModel(
 
 fun String.getModelName(): String {
     val tableNameWithoutTable = this.replace("Table", "")
-    val nameToWords = tableNameWithoutTable.split("(?=[A-Z][^A-Z]+\$)".toRegex())
-    val lastWordToSingular = CountableNounsConverter.getSingularForNoun(nameToWords.last())
-    return tableNameWithoutTable.replace(nameToWords.last(), lastWordToSingular.replaceFirstChar { it.titlecaseChar() })
+    val tableNameToWords = tableNameWithoutTable.split("(?=[A-Z][^A-Z]+\$)".toRegex())
+    val lastWordToSingular = CountableNounsConverter.getSingularForNoun(tableNameToWords.last())
+    return tableNameWithoutTable.replace(tableNameToWords.last(), lastWordToSingular.replaceFirstChar { it.titlecaseChar() })
 }
 

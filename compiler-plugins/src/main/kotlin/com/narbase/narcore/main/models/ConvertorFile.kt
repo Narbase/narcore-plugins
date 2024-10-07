@@ -75,7 +75,12 @@ fun generateConvertorFile(
             }
         }
 
-        os.appendLine("package ${CodeGenerationSettings.getDestinationConvertorsPackage()}$packageName".replace("/", "."))
+        os.appendLine(
+            "package ${CodeGenerationSettings.getDestinationConvertorsPackage()}$packageName".replace(
+                "/",
+                "."
+            )
+        )
         logger.warn("package ${CodeGenerationSettings.getDestinationConvertorsPackage()}$packageName".replace("/", "."))
         os.appendLine()
         logger.warn("")
@@ -155,7 +160,7 @@ fun generateConvertorImport(
 
         "Long" -> {
             val toKmmLongDeclaration =
-                functionDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "kmmLongOf"  }
+                functionDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "kmmLongOf" }
             val toKmmLongImport = generateImport(
                 toKmmLongDeclaration?.qualifiedName
                     ?: throw IllegalArgumentException("declaration qualified name cannot be null")
@@ -324,7 +329,13 @@ fun generateToDtoFunction(
                 )
             }>.toDto(): ${dto.dtoName}<${parentTypeParameters.joinToString(",")}> {"
         )
-        logger.warn("fun ${model.modelName}.toDto(): ${dto.dtoName} {")
+        logger.warn(
+            "fun <${parentTypeParameters.joinToString(",")}>${model.modelName}<${
+                parentTypeParameters.joinToString(
+                    ","
+                )
+            }>.toDto(): ${dto.dtoName}<${parentTypeParameters.joinToString(",")}> {"
+        )
     } else {
         os.appendLine("fun ${model.modelName}.toDto(): ${dto.dtoName} {")
         logger.warn("fun ${model.modelName}.toDto(): ${dto.dtoName} {")
@@ -336,7 +347,6 @@ fun generateToDtoFunction(
         logger.withIndent("id = id?.toStringUUID(),", 2)
     }
     model.modelProperties.forEach {
-        logger.warn("new prop: ${it.name}")
         if (it.name != "isDeleted") {
             val propertyType = it.ksType.declaration.qualifiedName?.getShortName()
             val nullability = if (it.ksType.isMarkedNullable) "?" else ""
@@ -401,7 +411,13 @@ fun generateToModelFunction(
                 )
             }>.toModel(): ${model.modelName}<${parentTypeParameters.joinToString(",")}> {"
         )
-        logger.warn("fun ${dto.dtoName}.toModel(): ${model.modelName} {")
+        logger.warn(
+            "fun <${parentTypeParameters.joinToString(",")}>${dto.dtoName}<${
+                parentTypeParameters.joinToString(
+                    ","
+                )
+            }>.toModel(): ${model.modelName}<${parentTypeParameters.joinToString(",")}> {"
+        )
     } else {
         os.appendLine("fun ${dto.dtoName}.toModel(): ${model.modelName} {")
         logger.warn("fun ${dto.dtoName}.toModel(): ${model.modelName} {")
@@ -413,7 +429,6 @@ fun generateToModelFunction(
         logger.withIndent("id = id?.toUUID(),", 2)
     }
     model.modelProperties.forEach {
-        logger.warn("new prop: ${it.name}")
         if (it.name != "isDeleted") {
             val propertyType = it.ksType.declaration.qualifiedName?.getShortName()
             val nullability = if (it.ksType.isMarkedNullable) "?" else ""

@@ -32,7 +32,7 @@ fun generateDtoFile(
     commonModuleDeclarations: List<KSDeclaration>
 ): DtoFile {
     val dtoName = "${model.modelName}Dto"
-    val packageName = getDtoPackageName(dtoName, model.modelPackage)
+    val packageName = getDtoPackageName(model.modelPackage)
     if (CodeGenerationSettings.hasGeneratedDto(dtoName)) return CodeGenerationSettings.getGeneratedDto(dtoName)
         ?: throw IllegalArgumentException("DtoFile has not been generated")
 
@@ -45,7 +45,7 @@ fun generateDtoFile(
         val imports = mutableSetOf<String>()
         if (isTableModel) {
             val dtoDeclaration =
-                commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "StringUUID" }
+                commonModuleDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "StringUUID" }
             val import = generateImport(
                 dtoDeclaration?.qualifiedName
                     ?: throw IllegalArgumentException("declaration qualified name cannot be null")
@@ -102,7 +102,6 @@ fun generateDtoImport(
     commonModuleDeclarations: List<KSDeclaration>,
     parentTypeParameters: Set<String>
 ): Set<String> {
-    logger.warn("Dto import ksType: ${ksType.makeNotNullable().declaration.simpleName.getShortName()}")
     val importsSet = mutableSetOf<String>()
     val arguments = ksType.arguments
     val typeParameters = ksType.declaration.typeParameters.map { it.name.getShortName() }.toSet()
@@ -126,20 +125,10 @@ fun generateDtoImport(
             }
         }
     }
-    when (val declarationName = ksType.makeNotNullable().declaration.simpleName.getShortName()) {
-        "UUID" -> {
+    when (ksType.makeNotNullable().declaration.simpleName.getShortName()) {
+        "UUID", "EntityID" -> {
             val dtoDeclaration =
-                commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "StringUUID" }
-            val import = generateImport(
-                dtoDeclaration?.qualifiedName
-                    ?: throw IllegalArgumentException("declaration qualified name cannot be null")
-            )
-            importsSet.add(import)
-        }
-
-        "EntityID" -> {
-            val dtoDeclaration =
-                commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "StringUUID" }
+                commonModuleDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "StringUUID" }
             val import = generateImport(
                 dtoDeclaration?.qualifiedName
                     ?: throw IllegalArgumentException("declaration qualified name cannot be null")
@@ -149,13 +138,12 @@ fun generateDtoImport(
 
         "Long" -> {
             val dtoDeclaration =
-                commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "KmmLong" }
+                commonModuleDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "KmmLong" }
             val import = generateImport(
                 dtoDeclaration?.qualifiedName
                     ?: throw IllegalArgumentException("declaration qualified name cannot be null")
             )
             importsSet.add(import)
-
         }
 
         "List" -> {
@@ -166,7 +154,7 @@ fun generateDtoImport(
 
         "DateTime" -> {
             val dtoDeclaration =
-                commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "DateTimeDto" }
+                commonModuleDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "DateTimeDto" }
             val import = generateImport(
                 dtoDeclaration?.qualifiedName
                     ?: throw IllegalArgumentException("declaration qualified name cannot be null")
@@ -187,7 +175,7 @@ fun generateDtoImport(
                     if (ksType.declaration.closestClassDeclaration()?.classKind == ClassKind.ENUM_CLASS) {
                         generateImport(qualifier, ksType)
                         val enumDtoDeclaration =
-                            commonModuleDeclarations.firstOrNull() { it.qualifiedName?.getShortName() == "DtoName" }
+                            commonModuleDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "DtoName" }
                         val import = generateImport(
                             enumDtoDeclaration?.qualifiedName
                                 ?: throw IllegalArgumentException("declaration qualified name cannot be null")
@@ -196,14 +184,12 @@ fun generateDtoImport(
                         generateImport(qualifier, ksType)
                     } else {
                         if (ksType.toString() !in parentTypeParameters) {
-                            logger.warn("new class: $ksType - ${ksType.declaration}")
                             val model = DBTableModel(
                                 ksType.makeNotNullable().declaration.toString(),
                                 qualifier,
                                 ksType.declaration.closestClassDeclaration()?.getProperties()?.toList()
                                     ?: throw IllegalArgumentException("properties cannot be null")
                             )
-                            logger.warn("new model: $model")
                             val dto = generateDtoFile(
                                 model,
                                 false,
@@ -247,17 +233,17 @@ fun generateDto(
         logger.withIndent("val id: StringUUID?,")
     }
     model.modelProperties.forEach {
-        if (it.name == "isDeleted") {
-        } else if (it.name == "createdOn") {
-            os.appendLineWithIndent("val ${it.name}: DateTimeDto?,")
-            logger.withIndent("val ${it.name}: DateTimeDto?,")
-        } else if (it.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
-            os.appendLineWithIndent("val ${it.name}: ${it.ksType.getTypeArgument().replace("UUID", "StringUUID")},")
-            logger.withIndent("val ${it.name}: ${it.ksType.getTypeArgument().replace("UUID", "StringUUID")},")
-        } else {
-            logger.warn("%%% ${it.ksType}")
-            os.appendLineWithIndent("val ${it.name}: ${it.ksType.mapModelTypeToDtoType(logger, typeParameters)},")
-            logger.withIndent("val ${it.name}: ${it.ksType},")
+        if (it.name != "isDeleted") {
+            if (it.name == "createdOn") {
+                os.appendLineWithIndent("val ${it.name}: DateTimeDto?,")
+                logger.withIndent("val ${it.name}: DateTimeDto?,")
+            } else if (it.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
+                os.appendLineWithIndent("val ${it.name}: ${it.ksType.getTypeArgument().replace("UUID", "StringUUID")},")
+                logger.withIndent("val ${it.name}: ${it.ksType.getTypeArgument().replace("UUID", "StringUUID")},")
+            } else {
+                os.appendLineWithIndent("val ${it.name}: ${it.ksType.mapModelTypeToDtoType(logger, typeParameters)},")
+                logger.withIndent("val ${it.name}: ${it.ksType},")
+            }
         }
     }
     os.appendLine(")")
@@ -266,20 +252,20 @@ fun generateDto(
 }
 
 private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters: Set<String>): String {
-    val arguments = this.arguments
-    val argumentsDtos = mutableSetOf<String>()
-    if (arguments.isNotEmpty()) {
-        arguments.forEach {
+    val propertyArguments = this.arguments
+    val propertyArgumentsDtos = mutableSetOf<String>()
+    if (propertyArguments.isNotEmpty()) {
+        propertyArguments.forEach {
             val resolvedKsType =
                 it.type?.resolve() ?: throw IllegalArgumentException("property ksType name cannot be null")
-            argumentsDtos.add(resolvedKsType.mapModelTypeToDtoType(logger, parentTypeParameters))
+            propertyArgumentsDtos.add(resolvedKsType.mapModelTypeToDtoType(logger, parentTypeParameters))
         }
     }
     return if (this.toString().contains("List")) {
-        if (argumentsDtos.isNotEmpty()) {
+        if (propertyArgumentsDtos.isNotEmpty()) {
             this.toString().replace("List", "Array").let {
-                val arguments = it.substringAfter("<").substringBeforeLast(">")
-                it.replace(arguments, argumentsDtos.joinToString(","))
+                val listArguments = it.substringAfter("<").substringBeforeLast(">")
+                it.replace(listArguments, propertyArgumentsDtos.joinToString(","))
             }
         } else {
             this.toString().replace("List", "Array")
@@ -295,10 +281,10 @@ private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters
             val qualifier = this.declaration.qualifiedName?.getQualifier()
                 ?: throw IllegalArgumentException("qualifier cannot be null")
             if (qualifier.contains(CodeGenerationSettings.rootProjectName)) {
-                if (argumentsDtos.isNotEmpty()) {
+                if (propertyArgumentsDtos.isNotEmpty()) {
                     this.toString().let {
                         val arguments = it.substringAfter("<").substringBeforeLast(">")
-                        val name = it.replace(arguments, argumentsDtos.joinToString(","))
+                        val name = it.replace(arguments, propertyArgumentsDtos.joinToString(","))
                         name.replaceBefore("<", "${it.substringBefore("<")}Dto")
                     }
                 } else {
@@ -330,7 +316,7 @@ private fun KSClassDeclaration.getProperties(): Sequence<DBTableProperty> {
         }
 }
 
-private fun getDtoPackageName(dtoName: String, modelPackage: String): String {
+private fun getDtoPackageName(modelPackage: String): String {
     return if (modelPackage.substringAfter("data") != modelPackage) {
         modelPackage.substringAfter("data")
     } else {
