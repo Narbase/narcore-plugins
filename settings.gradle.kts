@@ -1,4 +1,4 @@
-rootProject.name = "narcore"
+rootProject.name = "narcore-plugins"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
@@ -29,7 +29,4 @@ dependencyResolutionManagement {
     }
 }
 
-include(":narcore-server")
-include(":narcore-web")
-include(":dto-web")
-include("compiler-plugins")
+include("narrator")
