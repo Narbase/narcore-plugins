@@ -6,7 +6,9 @@ import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.gson.Gson
 import com.narbase.narcore.main.models.*
+import java.io.File
 
 class DBTableProcessor(
     private val options: Map<String, String>,
@@ -18,15 +20,12 @@ class DBTableProcessor(
     @OptIn(KspExperimental::class)
     override fun process(resolver: Resolver): List<KSAnnotated> {
         if (CodeGenerationSettings.didGenerate) return emptyList()
-        CodeGenerationSettings.rootProjectName = getOption(ROOT_PROJECT_NAME_OPTION)
-        CodeGenerationSettings.compilerPluginsProjectRootPath = getOption(COMPILER_PLUGINS_ROOT_PATH_OPTION)
-        CodeGenerationSettings.setDestinationDaosPackage(getOption(DESTINATION_DAOS_PATH_OPTION))
-        CodeGenerationSettings.setDestinationDtosPackage(getOption(DESTINATION_DTOS_PATH_OPTION))
-        CodeGenerationSettings.setDestinationConvertorsPackage(getOption(DESTINATION_CONVERTORS_PATH_OPTION))
+        readAndSetOptions()
+
         val uuidTableKsName = resolver.getKSNameFromString(UUID_TABLE_FULL_QUALIFIER)
         val symbols = resolver.getAllFiles()
             .flatMap { it.declarations }
-        val commonModulePackages = getCommonModulePackagesFromOptions(getOption(COMMON_MODULE_PACKAGES_OPTION))
+        val commonModulePackages = getCommonModulePackagesFromOptions(CodeGenerationSettings.commonModulePackagesPaths)
         val commonModuleSymbols = commonModulePackages.flatMap { resolver.getDeclarationsFromPackage(it) }
         val functionDeclarations = (commonModuleSymbols + symbols).filterIsInstance<KSFunctionDeclaration>()
         val classDeclarations = (commonModuleSymbols + symbols).filterIsInstance<KSClassDeclaration>()
@@ -106,12 +105,13 @@ class DBTableProcessor(
         const val BASIC_DAO_WITHOUT_DELETE_CLASS_NAME = "BasicDaoWithoutDelete"
         const val BASIC_DAO_CLASS_NAME = "BasicDao"
         const val MODEL_WITH_ID_CLASS_NAME = "ModelWithId"
+        const val ROOT_PROJECT_PATH = "rootProjectPath"
         const val ROOT_PROJECT_NAME_OPTION = "rootProjectName"
-        const val COMPILER_PLUGINS_ROOT_PATH_OPTION = "compilerPluginsRootPath"
         const val DESTINATION_DAOS_PATH_OPTION = "destinationDaosPath"
         const val DESTINATION_DTOS_PATH_OPTION = "destinationDtosPath"
         const val DESTINATION_CONVERTORS_PATH_OPTION = "destinationConvertorsPath"
-        const val COMMON_MODULE_PACKAGES_OPTION = "commonModulePackages"
+        const val COMMON_MODULE_PACKAGES_OPTION = "commonModulePackagesPaths"
+        const val KSP_OPTIONS_FILE_NAME = ".kspOptions.json"
         val commonDaoImports: Set<String> = setOf(
             "import java.util.UUID",
             "import org.jetbrains.exposed.sql.statements.UpdateBuilder",
@@ -122,6 +122,30 @@ class DBTableProcessor(
 
     private fun getOption(option: String): String {
         return options[option] ?: throw IllegalArgumentException("$option option cannot be null")
+    }
+
+    private fun readAndSetOptions() {
+        val gson = Gson()
+        val kspOptionsFile = File("${getOption(ROOT_PROJECT_PATH)}/$KSP_OPTIONS_FILE_NAME")
+        val json = gson.fromJson<Map<String, String>>(kspOptionsFile.reader(), Map::class.java)
+        CodeGenerationSettings.rootProjectName = json.get(ROOT_PROJECT_NAME_OPTION)
+            ?: throw IllegalArgumentException("$ROOT_PROJECT_NAME_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
+
+        CodeGenerationSettings.commonModulePackagesPaths = json.get(COMMON_MODULE_PACKAGES_OPTION)
+            ?: throw IllegalArgumentException("$COMMON_MODULE_PACKAGES_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
+
+        CodeGenerationSettings.setDestinationDaosPackage(
+            json.get(DESTINATION_DAOS_PATH_OPTION)
+                ?: throw IllegalArgumentException("$DESTINATION_DAOS_PATH_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
+        )
+        CodeGenerationSettings.setDestinationDtosPackage(
+            json.get(DESTINATION_DTOS_PATH_OPTION)
+                ?: throw IllegalArgumentException("$DESTINATION_DTOS_PATH_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
+        )
+        CodeGenerationSettings.setDestinationConvertorsPackage(
+            json.get(DESTINATION_CONVERTORS_PATH_OPTION)
+                ?: throw IllegalArgumentException("$DESTINATION_CONVERTORS_PATH_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
+        )
     }
 }
 

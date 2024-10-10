@@ -1,9 +1,10 @@
 package com.narbase.narcore.main
 
+import java.io.BufferedReader
 import java.io.File
 
 object CountableNounsConverter {
-    private val nounsFile = File("${CodeGenerationSettings.compilerPluginsProjectRootPath}/src/main/resources/noun.csv")
+    private var nounsReader = javaClass.getResourceAsStream("/noun.csv")?.bufferedReader()
     private val pluralToSingular = mutableMapOf<String, String>()
 
     fun getSingularForNoun(noun: String): String {
@@ -13,8 +14,7 @@ object CountableNounsConverter {
 
     private fun readFile() {
         if (pluralToSingular.isEmpty()) {
-            nounsFile.bufferedReader()
-            nounsFile.readLines().forEach { line ->
+            nounsReader?.readLines()?.forEach { line ->
                 val splitLine = line.split(",")
                 pluralToSingular[splitLine.last()] = splitLine.first()
             }
