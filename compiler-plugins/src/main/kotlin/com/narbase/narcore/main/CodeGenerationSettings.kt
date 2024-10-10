@@ -7,7 +7,7 @@ import com.narbase.narcore.main.models.DtoFile
 object CodeGenerationSettings {
     var didGenerate = false
     lateinit var rootProjectName: String
-    lateinit var compilerPluginsProjectRootPath: String
+    lateinit var commonModulePackagesPaths: String
     private lateinit var _destinationDaosPackage: String
     private lateinit var _destinationDtosPackage: String
     private lateinit var _destinationConvertorsPackage: String
