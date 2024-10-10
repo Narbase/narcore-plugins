@@ -10,23 +10,11 @@ open class NarratorExtension {
     lateinit var dtoWebPath: String
     var shouldOverwrite: Boolean = false
 
-    fun sourceConfig(block: SourceConfig.() -> Unit) {
-        sourceConfig.apply(block)
-    }
-
-    val sourceConfig = SourceConfig()
-
     fun destinationConfig(block: DestinationConfig.() -> Unit) {
         destinationConfig.apply(block)
     }
 
     val destinationConfig = DestinationConfig()
-
-    class SourceConfig {
-        lateinit var daosRelativePath: String
-        lateinit var dtosRelativePath: String
-        lateinit var convertorsRelativePath: String
-    }
 
     class DestinationConfig {
         lateinit var packageRelativePath: String
@@ -48,18 +36,18 @@ class NarratorPlugin : Plugin<Project> {
             val destinationDaosRelativePath =
                 "${destinationServerPackagePath}/${config.destinationConfig.daosRelativePath}"
             val sourceRootPath = "${project.projectDir.path}/build/generated/ksp/main/kotlin"
-            val sourceDaosRelativePath = "${sourceRootPath}/${config.sourceConfig.daosRelativePath}"
+            val sourceDaosRelativePath = "${sourceRootPath}/daos"
 
             val destinationDtoWebRootPath = "${config.dtoWebPath}/src/commonMain/kotlin"
             val destinationDtoWebPackagePath =
                 "${destinationDtoWebRootPath}/${config.destinationConfig.packageRelativePath}"
             val destinationDtosRelativePath =
                 "${destinationDtoWebPackagePath}/${config.destinationConfig.dtosRelativePath}"
-            val sourceDtosRelativePath = "${sourceRootPath}/${config.sourceConfig.dtosRelativePath}"
+            val sourceDtosRelativePath = "${sourceRootPath}/dtos"
 
             val destinationConvertorsRelativePath =
                 "${destinationServerPackagePath}/${config.destinationConfig.convertorsRelativePath}"
-            val sourceConvertorsRelativePath = "${sourceRootPath}/${config.sourceConfig.convertorsRelativePath}"
+            val sourceConvertorsRelativePath = "${sourceRootPath}/conversions"
 
             val sourceDaosFile = File(sourceDaosRelativePath)
             val sourceDtosFile = File(sourceDtosRelativePath)
