@@ -52,6 +52,8 @@ fun generateDtoFile(
             )
             imports.add(import)
         }
+        imports.add("import kotlin.js.JsExport")
+
         model.modelProperties.forEach {
             if (it.name != "isDeleted") {
                 generateDtoImport(
@@ -231,6 +233,7 @@ fun generateDto(
     logger: KSPLogger,
     os: OutputStream
 ): String {
+    os.appendLine("@JsExport")
     if (typeParameters.isNotEmpty()) {
         os.appendLine("data class ${model.modelName}Dto<${typeParameters.joinToString(",")}>(")
         logger.warn("data class ${model.modelName}Dto<${typeParameters.joinToString(",")}>(")
