@@ -2,6 +2,7 @@ package com.narbase.narcore.main
 
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getDeclaredProperties
+import com.google.devtools.ksp.isOpen
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
@@ -20,7 +21,7 @@ class DBTableProcessor(
     @OptIn(KspExperimental::class)
     override fun process(resolver: Resolver): List<KSAnnotated> {
         if (CodeGenerationSettings.didGenerate) return emptyList()
-        readAndSetOptions()
+        readAndSetOptions() ?: return emptyList()
 
         val uuidTableKsName = resolver.getKSNameFromString(UUID_TABLE_FULL_QUALIFIER)
         val symbols = resolver.getAllFiles()
@@ -33,7 +34,7 @@ class DBTableProcessor(
             .filter { ksClassDeclaration ->
                 ksClassDeclaration.superTypes
                     .map { it.resolve().declaration.qualifiedName }
-                    .contains(uuidTableKsName)
+                    .contains(uuidTableKsName) && ksClassDeclaration.isOpen().not()
             }
         tables.forEach { table ->
             val tableName = table.qualifiedName?.getShortName()
@@ -112,6 +113,7 @@ class DBTableProcessor(
         const val DESTINATION_CONVERTORS_PATH_OPTION = "destinationConvertorsPath"
         const val COMMON_MODULE_PACKAGES_OPTION = "commonModulePackagesPaths"
         const val KSP_OPTIONS_FILE_NAME = ".kspOptions.json"
+        const val TASK_NAME_OPTION = "taskName"
         val commonDaoImports: Set<String> = setOf(
             "import java.util.UUID",
             "import org.jetbrains.exposed.sql.statements.UpdateBuilder",
@@ -124,7 +126,7 @@ class DBTableProcessor(
         return options[option] ?: throw IllegalArgumentException("$option option cannot be null")
     }
 
-    private fun readAndSetOptions() {
+    private fun readAndSetOptions(): String? {
         val gson = Gson()
         val kspOptionsFile = File("${getOption(ROOT_PROJECT_PATH)}/$KSP_OPTIONS_FILE_NAME")
         val json = gson.fromJson<Map<String, String>>(kspOptionsFile.reader(), Map::class.java)
@@ -146,6 +148,7 @@ class DBTableProcessor(
             json.get(DESTINATION_CONVERTORS_PATH_OPTION)
                 ?: throw IllegalArgumentException("$DESTINATION_CONVERTORS_PATH_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
         )
+        return json.get(TASK_NAME_OPTION)
     }
 }
 

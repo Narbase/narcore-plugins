@@ -49,12 +49,12 @@ class NarratorPlugin : Plugin<Project> {
                 "${destinationServerPackagePath}/${config.destinationConfig.convertorsRelativePath}"
             val sourceConvertorsRelativePath = "${sourceRootPath}/conversions"
 
-            val sourceDaosFile = File(sourceDaosRelativePath)
-            val sourceDtosFile = File(sourceDtosRelativePath)
-            val sourceConvertorsFile = File(sourceConvertorsRelativePath)
-            val destinationDaosFile = File(destinationDaosRelativePath)
-            val destinationDtosFile = File(destinationDtosRelativePath)
-            val destinationConvertorsFile = File(destinationConvertorsRelativePath)
+            val sourceDaosDirectory = File(sourceDaosRelativePath)
+            val sourceDtosDirectory = File(sourceDtosRelativePath)
+            val sourceConvertorsDirectory = File(sourceConvertorsRelativePath)
+            val destinationDaosDirectory = File(destinationDaosRelativePath)
+            val destinationDtosDirectory = File(destinationDtosRelativePath)
+            val destinationConvertorsDirectory = File(destinationConvertorsRelativePath)
 
 
             val commonModulePackagesPaths =
@@ -62,6 +62,7 @@ class NarratorPlugin : Plugin<Project> {
 
 
             val kspOptions = KspOptions(
+                taskName = this.name,
                 rootProjectName = project.rootProject.name,
                 destinationDaosPath = destinationDaosRelativePath,
                 destinationDtosPath = destinationDtosRelativePath,
@@ -77,17 +78,51 @@ class NarratorPlugin : Plugin<Project> {
 
             dependsOn("kspKotlin")
             doLast {
-                val didCopyDaos = sourceDaosFile.copyRecursively(destinationDaosFile, config.shouldOverwrite)
-                if (didCopyDaos) sourceDaosFile.deleteRecursively()
+                try {
+                    val didCopyDaos = sourceDaosDirectory.copyRecursively(
+                        destinationDaosDirectory,
+                        config.shouldOverwrite,
+                        onError = { file, exception ->
+                            if (exception is FileAlreadyExistsException && config.shouldOverwrite.not())
+                                OnErrorAction.SKIP
+                            else
+                                OnErrorAction.TERMINATE
+                        }
+                    )
+                    if (didCopyDaos) sourceDaosDirectory.deleteRecursively()
 
-                val didCopyDtos = sourceDtosFile.copyRecursively(destinationDtosFile, config.shouldOverwrite)
-                if (didCopyDtos) sourceDtosFile.deleteRecursively()
+                    val didCopyDtos =
+                        sourceDtosDirectory.copyRecursively(
+                            destinationDtosDirectory,
+                            config.shouldOverwrite,
+                            onError = { file, exception ->
+                                if (exception is FileAlreadyExistsException && config.shouldOverwrite.not())
+                                    OnErrorAction.SKIP
+                                else
+                                    OnErrorAction.TERMINATE
+                            }
+                        )
+                    if (didCopyDtos) sourceDtosDirectory.deleteRecursively()
 
-                val didCopyConvertors =
-                    sourceConvertorsFile.copyRecursively(destinationConvertorsFile, config.shouldOverwrite)
-                if (didCopyConvertors) sourceConvertorsFile.deleteRecursively()
-
-                kspOptionsFile.deleteRecursively()
+                    val didCopyConvertors =
+                        sourceConvertorsDirectory.copyRecursively(
+                            destinationConvertorsDirectory,
+                            config.shouldOverwrite,
+                            onError = { file, exception ->
+                                if (exception is FileAlreadyExistsException && config.shouldOverwrite.not())
+                                    OnErrorAction.SKIP
+                                else
+                                    OnErrorAction.TERMINATE
+                            }
+                        )
+                    if (didCopyConvertors) sourceConvertorsDirectory.deleteRecursively()
+                } catch (e: Exception) {
+                    if (e !is FileAlreadyExistsException || config.shouldOverwrite) {
+                        throw e
+                    }
+                } finally {
+                    kspOptionsFile.deleteRecursively()
+                }
             }
         }
     }
@@ -120,6 +155,7 @@ fun getCommonModulePaths(dtoWebPath: String, destinationPackageRelativePath: Str
 }
 
 data class KspOptions(
+    val taskName: String,
     val rootProjectName: String,
     val destinationDaosPath: String,
     val destinationDtosPath: String,
