@@ -6,6 +6,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import org.gradle.kotlin.dsl.configure
@@ -48,6 +49,7 @@ abstract class NarratorTask @Inject constructor(@Input val config: NarratorExten
     var overwrite: Boolean = false
     @get:Input
     @set:Option(option = "table", description = "Name of target db table")
+    @Optional
     var tableName: String? = null
 
 
