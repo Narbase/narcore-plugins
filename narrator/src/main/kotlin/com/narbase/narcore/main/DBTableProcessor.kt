@@ -6,6 +6,7 @@ import com.google.devtools.ksp.isOpen
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.gson.Gson
 import com.narbase.narcore.main.models.*
@@ -36,34 +37,48 @@ class DBTableProcessor(
                     .map { it.resolve().declaration.qualifiedName }
                     .contains(uuidTableKsName) && ksClassDeclaration.isOpen().not()
             }
-        tables.forEach { table ->
-            val tableName = table.qualifiedName?.getShortName()
-            val tablePackage = table.qualifiedName?.getQualifier()
-            val dbTableProperties = table.getProperties()
-            val dbTable = DBTable(
-                tableName = tableName ?: throw IllegalArgumentException("table name cannot be null"),
-                tablePackage = tablePackage ?: throw IllegalArgumentException("table package cannot be null"),
-                properties = dbTableProperties.toList(),
-                isDeletable = table.superTypes.map { it.toString() }.contains("DeletableTable")
-            )
-            logger.newLine()
-            val commonImports = getTablesCommonImports(classDeclarations, dbTable.isDeletable)
-            val daoFile = generateDaoFile(dbTable, logger, codeGenerator, commonImports)
-            val dtoFile = generateDtoFile(daoFile.model, true, setOf(), logger, codeGenerator, commonModuleSymbols)
-            generateConvertorFile(
-                daoFile.model,
-                dtoFile.dto,
-                true,
-                setOf(),
-                logger,
-                codeGenerator,
-                classDeclarations,
-                functionDeclarations
-            )
-            logger.newLine()
+        if (CodeGenerationSettings.targetTableName != null) {
+            val table = tables.first { it.qualifiedName?.getShortName() == CodeGenerationSettings.targetTableName }
+            generateAll(table, classDeclarations, commonModuleSymbols, functionDeclarations)
+        } else {
+            tables.forEach { table ->
+                generateAll(table, classDeclarations, commonModuleSymbols, functionDeclarations)
+            }
         }
         CodeGenerationSettings.didGenerate = true
         return emptyList()
+    }
+
+    private fun generateAll(
+        table: KSClassDeclaration,
+        classDeclarations: List<KSClassDeclaration>,
+        commonModuleSymbols: List<KSDeclaration>,
+        functionDeclarations: List<KSFunctionDeclaration>
+    ) {
+        val tableName = table.qualifiedName?.getShortName()
+        val tablePackage = table.qualifiedName?.getQualifier()
+        val dbTableProperties = table.getProperties()
+        val dbTable = DBTable(
+            tableName = tableName ?: throw IllegalArgumentException("table name cannot be null"),
+            tablePackage = tablePackage ?: throw IllegalArgumentException("table package cannot be null"),
+            properties = dbTableProperties.toList(),
+            isDeletable = table.superTypes.map { it.toString() }.contains("DeletableTable")
+        )
+        logger.newLine()
+        val commonImports = getTablesCommonImports(classDeclarations, dbTable.isDeletable)
+        val daoFile = generateDaoFile(dbTable, logger, codeGenerator, commonImports)
+        val dtoFile = generateDtoFile(daoFile.model, true, setOf(), logger, codeGenerator, commonModuleSymbols)
+        generateConvertorFile(
+            daoFile.model,
+            dtoFile.dto,
+            true,
+            setOf(),
+            logger,
+            codeGenerator,
+            classDeclarations,
+            functionDeclarations
+        )
+        logger.newLine()
     }
 
     private fun KSClassDeclaration.getProperties(): Sequence<DBTableProperty> {
@@ -114,6 +129,7 @@ class DBTableProcessor(
         const val COMMON_MODULE_PACKAGES_OPTION = "commonModulePackagesPaths"
         const val KSP_OPTIONS_FILE_NAME = ".kspOptions.json"
         const val TASK_NAME_OPTION = "taskName"
+        const val TABLE_NAME_OPTION = "tableName"
         val commonDaoImports: Set<String> = setOf(
             "import java.util.UUID",
             "import org.jetbrains.exposed.sql.statements.UpdateBuilder",
@@ -148,6 +164,10 @@ class DBTableProcessor(
             json.get(DESTINATION_CONVERTORS_PATH_OPTION)
                 ?: throw IllegalArgumentException("$DESTINATION_CONVERTORS_PATH_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
         )
+//        CodeGenerationSettings.targetTableName =
+//            json.get(TABLE_NAME_OPTION)
+//                ?: throw IllegalArgumentException("$TABLE_NAME_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
+
         return json.get(TASK_NAME_OPTION)
     }
 }

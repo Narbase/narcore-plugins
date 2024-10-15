@@ -8,6 +8,7 @@ object CodeGenerationSettings {
     var didGenerate = false
     lateinit var rootProjectName: String
     lateinit var commonModulePackagesPaths: String
+    var targetTableName: String? = null
     private lateinit var _destinationDaosPackage: String
     private lateinit var _destinationDtosPackage: String
     private lateinit var _destinationConvertorsPackage: String
