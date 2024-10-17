@@ -395,15 +395,15 @@ fun generateToDtoFunction(
                         ?: throw IllegalArgumentException("qualifier cannot be null")
                     if (qualifier.contains(CodeGenerationSettings.rootProjectName)) {
                         if (propertyType in parentTypeParameters) {
-                            os.appendLineWithIndent("${it.name} = ${it.name}$nullability,", 2)
-                            logger.withIndent("${it.name} = ${it.name}$nullability,", 2)
+                            os.appendLineWithIndent("${it.name} = ${it.name},", 2)
+                            logger.withIndent("${it.name} = ${it.name},", 2)
                         } else {
                             os.appendLineWithIndent("${it.name} = ${it.name}$nullability.toDto(),", 2)
                             logger.withIndent("${it.name} = ${it.name}$nullability.toDto(),", 2)
                         }
                     } else {
-                        os.appendLineWithIndent("${it.name} = ${it.name}$nullability,", 2)
-                        logger.withIndent("${it.name} = ${it.name}$nullability,", 2)
+                        os.appendLineWithIndent("${it.name} = ${it.name},", 2)
+                        logger.withIndent("${it.name} = ${it.name},", 2)
                     }
                 }
             }
@@ -477,15 +477,15 @@ fun generateToModelFunction(
                         ?: throw IllegalArgumentException("qualifier cannot be null")
                     if (qualifier.contains(CodeGenerationSettings.rootProjectName)) {
                         if (propertyType in parentTypeParameters) {
-                            os.appendLineWithIndent("${it.name} = ${it.name}$nullability,", 2)
-                            logger.withIndent("${it.name} = ${it.name}$nullability,", 2)
+                            os.appendLineWithIndent("${it.name} = ${it.name},", 2)
+                            logger.withIndent("${it.name} = ${it.name},", 2)
                         } else {
                             os.appendLineWithIndent("${it.name} = ${it.name}$nullability.toModel(),", 2)
                             logger.withIndent("${it.name} = ${it.name}$nullability.toModel(),", 2)
                         }
                     } else {
-                        os.appendLineWithIndent("${it.name} = ${it.name}$nullability,", 2)
-                        logger.withIndent("${it.name} = ${it.name}$nullability,", 2)
+                        os.appendLineWithIndent("${it.name} = ${it.name},", 2)
+                        logger.withIndent("${it.name} = ${it.name},", 2)
                     }
                 }
             }
