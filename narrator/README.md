@@ -52,7 +52,6 @@ This document is a step-by-step guide on how to use it.
   ```
 	  narrator {  
 	    dtoWebPath = projects.dtoWeb.dependencyProject.projectDir.path  
-	    shouldOverwrite = true   
 	    destinationConfig {  
 	        packageRelativePath = "com/narbase/narcore"  
 	        daosRelativePath = "data/access"  
