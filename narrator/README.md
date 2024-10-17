@@ -64,3 +64,7 @@ This document is a step-by-step guide on how to use it.
 
 #### Using the plugin
 - After configuring the target project and successfully reloading project, run this command in the terminal to start the code generation task after replacing `server-module` with the name of the server sub-project in your project `./gradlew :server-module:narrateAll`
+
+#### Command-line options
+##### `--overwrite`
+- Provide this option if you want `all` generated files to overwrite existing files. By default, only new file are generated. `./gradlew :server-module:narrateAll --overwrite`
