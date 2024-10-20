@@ -145,6 +145,8 @@ class DBTableProcessor(
     private fun readAndSetOptions(): String? {
         val gson = Gson()
         val kspOptionsFile = File("${getOption(ROOT_PROJECT_PATH)}/$KSP_OPTIONS_FILE_NAME")
+        if (kspOptionsFile.exists().not()) return null
+
         val json = gson.fromJson<Map<String, String>>(kspOptionsFile.reader(), Map::class.java)
         CodeGenerationSettings.rootProjectName = json.get(ROOT_PROJECT_NAME_OPTION)
             ?: throw IllegalArgumentException("$ROOT_PROJECT_NAME_OPTION option not found in $KSP_OPTIONS_FILE_NAME file")
