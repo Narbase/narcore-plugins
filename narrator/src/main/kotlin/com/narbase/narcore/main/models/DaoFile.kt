@@ -102,9 +102,10 @@ private fun generateDao(
     logger.withIndent("id = row[table.id].value,", 3)
     properties.forEach { property ->
         if (property.name != "isDeleted") {
+            val nullability = if (property.ksType.isMarkedNullable) "?" else ""
             if (property.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
-                os.appendLineWithIndent("${property.name} = row[table.${property.name}].value,", 3)
-                logger.withIndent("${property.name} = row[table.${property.name}].value,", 3)
+                os.appendLineWithIndent("${property.name} = row[table.${property.name}]$nullability.value,", 3)
+                logger.withIndent("${property.name} = row[table.${property.name}]$nullability.value,", 3)
             } else {
                 os.appendLineWithIndent("${property.name} = row[table.${property.name}],", 3)
                 logger.withIndent("${property.name} = row[table.${property.name}],", 3)
