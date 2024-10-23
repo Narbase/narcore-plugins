@@ -148,6 +148,12 @@ fun generateDtoImport(
             importsSet.add(import)
         }
 
+        "BigDecimal" -> {
+            val dtoDeclaration = "kotlin.Double"
+            val import = generateImport(dtoDeclaration)
+            importsSet.add(import)
+        }
+
         "List" -> {
             val dtoDeclaration = "kotlin.Array"
             val import = generateImport(dtoDeclaration)
@@ -265,6 +271,7 @@ fun generateDto(
 }
 
 private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters: Set<String>): String {
+    val nullability = if (this.isMarkedNullable) "?" else ""
     val propertyArguments = this.arguments
     val propertyArgumentsDtos = mutableSetOf<String>()
     if (propertyArguments.isNotEmpty()) {
@@ -285,6 +292,8 @@ private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters
         }
     } else if (this.toString().contains("Long")) {
         this.toString().replace("Long", "KmmLong")
+    } else if (this.toString().contains("BigDecimal")) {
+        this.toString().replace("BigDecimal", "Double")
     } else if (this.toString().contains("LocalDate")) {
         this.toString().replace("LocalDate", "DateDto")
     } else if (this.toString().contains("DateTime")) {
@@ -306,7 +315,7 @@ private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters
                     if (this.toString() in parentTypeParameters) {
                         this.toString()
                     } else {
-                        "${this}Dto"
+                        "${this.makeNotNullable()}Dto$nullability"
                     }
                 }
             } else {

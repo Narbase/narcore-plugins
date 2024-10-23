@@ -165,7 +165,16 @@ fun generateConvertorImport(
                 toKmmLongDeclaration?.qualifiedName
                     ?: throw IllegalArgumentException("declaration qualified name cannot be null")
             )
+            val toLongImport = generateImport("java.math.Long")
             importsSet.add(toKmmLongImport)
+            importsSet.add(toLongImport)
+        }
+
+        "BigDecimal" -> {
+            val toDoubleImport = generateImport("kotlin.Double")
+            val toBigDecimalImport = generateImport("java.math.BigDecimal")
+            importsSet.add(toDoubleImport)
+            importsSet.add(toBigDecimalImport)
         }
 
         "LocalDate" -> {
@@ -376,6 +385,9 @@ fun generateToDtoFunction(
             } else if (propertyType == "Long") {
                 os.appendLineWithIndent("${it.name} = ${it.name}$nullability.let{ kmmLongOf(it) },", 2)
                 logger.withIndent("${it.name} = ${it.name}$nullability.let{ kmmLongOf(it) },", 2)
+            } else if (propertyType == "BigDecimal") {
+                os.appendLineWithIndent("${it.name} = ${it.name}$nullability.let{ it.toDouble() },", 2)
+                logger.withIndent("${it.name} = ${it.name}$nullability.let{ it.toDouble() },", 2)
             } else if (propertyType == "LocalDate") {
                 os.appendLineWithIndent("${it.name} = ${it.name}$nullability.toDto(),", 2)
                 logger.withIndent("${it.name} = ${it.name}$nullability.toDto(),", 2)
@@ -458,6 +470,12 @@ fun generateToModelFunction(
             } else if (propertyType == "EntityID") {
                 os.appendLineWithIndent("${it.name} = ${it.name}$nullability.toUUID(),", 2)
                 logger.withIndent("${it.name} = ${it.name}$nullability.toUUID(),", 2)
+            } else if (propertyType == "Long") {
+                os.appendLineWithIndent("${it.name} = ${it.name}$nullability.let{ it.toLong() },", 2)
+                logger.withIndent("${it.name} = ${it.name}$nullability.let{ it.toLong() },", 2)
+            } else if (propertyType == "BigDecimal") {
+                os.appendLineWithIndent("${it.name} = ${it.name}$nullability.let{ BigDecimal.valueOf(it) },", 2)
+                logger.withIndent("${it.name} = ${it.name}$nullability.let{ BigDecimal.valueOf(it) },", 2)
             } else if (propertyType == "LocalDate") {
                 os.appendLineWithIndent("${it.name} = ${it.name}$nullability.toDate(),", 2)
                 logger.withIndent("${it.name} = ${it.name}$nullability.toDate(),", 2)
@@ -561,6 +579,8 @@ private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters
     } else
         if (this.toString().contains("Long")) {
             ".map{ kmmLongOf(it) }"
+        } else if (this.toString().contains("BigDecimal")) {
+            ".map{ it.toDouble() }"
         } else if (this.toString().contains("LocalDate")) {
             ".map{ it.toDto() }"
         } else if (this.toString().contains("DateTime")) {
@@ -603,6 +623,8 @@ private fun KSType.mapDtoTypeToModelType(logger: KSPLogger, parentTypeParameters
     } else
         if (this.toString().contains("Long")) {
             ".map{ it.toLong() }"
+        } else if (this.toString().contains("BigDecimal")) {
+            ".map{ BigDecimal.valueOf(it) }"
         } else if (this.toString().contains("LocalDate")) {
             ".map{ it.toDate() }"
         } else if (this.toString().contains("DateTime")) {
