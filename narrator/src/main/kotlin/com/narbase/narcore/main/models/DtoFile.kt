@@ -127,7 +127,7 @@ fun generateDtoImport(
             }
         }
     }
-    when (ksType.makeNotNullable().declaration.simpleName.getShortName()) {
+    when (val propertyType = ksType.makeNotNullable().declaration.simpleName.getShortName()) {
         "UUID", "EntityID" -> {
             val dtoDeclaration =
                 commonModuleDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "StringUUID" }
@@ -182,7 +182,13 @@ fun generateDtoImport(
 
         else -> {
             val dtoDeclaration =
-                commonModuleDeclarations.firstOrNull { it.qualifiedName?.getShortName() == "${it.qualifiedName?.getShortName()}Dto" }
+                commonModuleDeclarations.firstOrNull {
+                    if (propertyType.endsWith("Dto")) {
+                        it.qualifiedName?.getShortName() == propertyType
+                    } else {
+                        it.qualifiedName?.getShortName() == "${propertyType}Dto"
+                    }
+                }
             val import = if (dtoDeclaration != null) {
                 generateImport(
                     dtoDeclaration.qualifiedName
@@ -257,11 +263,22 @@ fun generateDto(
                 os.appendLineWithIndent("val ${it.name}: DateTimeDto?,")
                 logger.withIndent("val ${it.name}: DateTimeDto?,")
             } else if (it.ksType.declaration.qualifiedName?.getShortName() == "EntityID") {
-                os.appendLineWithIndent("val ${it.name}: ${it.ksType.getTypeArgument().replace("UUID", "StringUUID")},")
+                os.appendLineWithIndent(
+                    "val ${it.name}: ${
+                        it.ksType.getTypeArgument().replace("UUID", "StringUUID")
+                    },"
+                )
                 logger.withIndent("val ${it.name}: ${it.ksType.getTypeArgument().replace("UUID", "StringUUID")},")
             } else {
-                os.appendLineWithIndent("val ${it.name}: ${it.ksType.mapModelTypeToDtoType(logger, typeParameters)},")
-                logger.withIndent("val ${it.name}: ${it.ksType},")
+                os.appendLineWithIndent(
+                    "val ${it.name}: ${
+                        it.ksType.mapModelTypeToDtoType(
+                            logger,
+                            typeParameters
+                        )
+                    },"
+                )
+                logger.withIndent("val ${it.name}: ${it.ksType.mapModelTypeToDtoType(logger, typeParameters)},")
             }
         }
     }
@@ -281,7 +298,7 @@ private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters
             propertyArgumentsDtos.add(resolvedKsType.mapModelTypeToDtoType(logger, parentTypeParameters))
         }
     }
-    return if (this.toString().contains("List")) {
+    return if (this.toString().startsWith("List")) {
         if (propertyArgumentsDtos.isNotEmpty()) {
             this.toString().replace("List", "Array").let {
                 val listArguments = it.substringAfter("<").substringBeforeLast(">")
@@ -315,7 +332,11 @@ private fun KSType.mapModelTypeToDtoType(logger: KSPLogger, parentTypeParameters
                     if (this.toString() in parentTypeParameters) {
                         this.toString()
                     } else {
-                        "${this.makeNotNullable()}Dto$nullability"
+                        if (this.makeNotNullable().toString().endsWith("Dto")) {
+                            "${this.makeNotNullable()}$nullability"
+                        } else {
+                            "${this.makeNotNullable()}Dto$nullability"
+                        }
                     }
                 }
             } else {

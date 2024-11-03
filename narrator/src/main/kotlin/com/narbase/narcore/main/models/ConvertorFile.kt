@@ -252,7 +252,7 @@ fun generateConvertorImport(
                                     } ?: CodeGenerationSettings.getGeneratedModel(modelName)
                                 ?: throw IllegalArgumentException("model cannot be null")
 
-                            val dtoName = "${modelName}Dto"
+                            val dtoName = modelName.let { if (it.endsWith("Dto")) it else "${modelName}Dto" }
                             val dto =
                                 classDeclarations.firstOrNull { it.qualifiedName?.getShortName() == dtoName && it.classKind == ClassKind.CLASS }
                                     ?.let {
@@ -263,7 +263,7 @@ fun generateConvertorImport(
                                             it.getProperties().toList()
                                         )
                                     } ?: CodeGenerationSettings.getGeneratedDto(dtoName)?.dto
-                                ?: throw IllegalArgumentException("dto cannot be null")
+                                ?: throw IllegalArgumentException("dto $dtoName cannot be null")
                             val convertor = generateConvertorFile(
                                 model,
                                 dto,
@@ -303,7 +303,7 @@ fun generateConvertorImport(
                                     } ?: CodeGenerationSettings.getGeneratedModel(modelName)
                                 ?: throw IllegalArgumentException("model cannot be null")
 
-                            val dtoName = "${modelName}Dto"
+                            val dtoName = modelName.let { if (it.endsWith("Dto")) it else "${modelName}Dto" }
                             val dto =
                                 classDeclarations.firstOrNull { it.qualifiedName?.getShortName() == dtoName && it.classKind == ClassKind.CLASS }
                                     ?.let {
@@ -314,7 +314,7 @@ fun generateConvertorImport(
                                             it.getProperties().toList()
                                         )
                                     } ?: CodeGenerationSettings.getGeneratedDto(dtoName)?.dto
-                                ?: throw IllegalArgumentException("dto cannot be null")
+                                ?: throw IllegalArgumentException("dto $dtoName cannot be null")
                             val convertor = generateConvertorFile(
                                 model,
                                 dto,
