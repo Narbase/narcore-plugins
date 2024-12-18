@@ -11,6 +11,7 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.gson.Gson
 import com.narbase.narcore.main.models.*
 import java.io.File
+import java.util.logging.Level
 
 class DBTableProcessor(
     private val options: Map<String, String>,
@@ -22,7 +23,17 @@ class DBTableProcessor(
     @OptIn(KspExperimental::class)
     override fun process(resolver: Resolver): List<KSAnnotated> {
         if (CodeGenerationSettings.didGenerate) return emptyList()
-        readAndSetOptions() ?: return emptyList()
+
+        try {
+            readAndSetOptions() ?: return emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw e
+        } finally {
+            val kspOptionsFile = File("${getOption(ROOT_PROJECT_PATH)}/$KSP_OPTIONS_FILE_NAME")
+            if (kspOptionsFile.exists())
+                kspOptionsFile.delete()
+        }
 
         val uuidTableKsName = resolver.getKSNameFromString(UUID_TABLE_FULL_QUALIFIER)
         val symbols = resolver.getAllFiles()

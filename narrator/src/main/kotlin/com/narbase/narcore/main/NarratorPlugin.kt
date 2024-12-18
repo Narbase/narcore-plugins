@@ -4,16 +4,13 @@ import groovy.transform.Internal
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
-import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.create
-import org.gradle.kotlin.dsl.extra
-import org.gradle.kotlin.dsl.get
 import java.io.File
+import java.util.logging.Level
 import javax.inject.Inject
 
 
@@ -38,7 +35,91 @@ class NarratorPlugin : Plugin<Project> {
 
     override fun apply(target: Project) {
         val config = target.extensions.create("narrator", NarratorExtension::class)
-        target.tasks.register("narrateAll", NarratorTask::class.java, config).configure { dependsOn("kspKotlin") }
+
+        target.tasks.register("preNarrate", PreNarratorTask::class.java, config)
+
+        target.tasks.register("narrateAll", NarratorTask::class.java, config).configure {
+            dependsOn("preNarrate")
+            dependsOn("kspKotlin")
+        }
+    }
+}
+
+abstract class PreNarratorTask @Inject constructor(@Input val config: NarratorExtension) : DefaultTask() {
+
+    @get:Input
+    @set:Option(option = "table", description = "Name of target db table")
+    @Optional
+    var tableName: String? = null
+
+
+    @Internal
+    private val destinationServerRootPath = "${project.projectDir.path}/src/main/kotlin"
+
+    @Internal
+    private val destinationServerPackagePath =
+        "${destinationServerRootPath}/${config.destinationConfig.packageRelativePath}"
+
+    @Internal
+    private val destinationDaosRelativePath =
+        "${destinationServerPackagePath}/${config.destinationConfig.daosRelativePath}"
+
+    @Internal
+    private val sourceRootPath = "${project.projectDir.path}/build/generated/ksp/main/kotlin"
+
+    @Internal
+    private val destinationDtoWebRootPath = "${config.dtoWebPath}/src/commonMain/kotlin"
+
+    @Internal
+    private val destinationDtoWebPackagePath =
+        "${destinationDtoWebRootPath}/${config.destinationConfig.packageRelativePath}"
+
+    @Internal
+    private val destinationDtosRelativePath =
+        "${destinationDtoWebPackagePath}/${config.destinationConfig.dtosRelativePath}"
+
+    @Internal
+    private val destinationConvertorsRelativePath =
+        "${destinationServerPackagePath}/${config.destinationConfig.convertorsRelativePath}"
+
+
+    @Internal
+    private val commonModulePackagesPaths =
+        getCommonModulePaths(config.dtoWebPath, config.destinationConfig.packageRelativePath)
+
+    @Internal
+    private val kspOptions = KspOptions(
+        taskName = this.name,
+        tableName = tableName,
+        rootProjectName = project.rootProject.name,
+        destinationDaosPath = destinationDaosRelativePath,
+        destinationDtosPath = destinationDtosRelativePath,
+        destinationConvertorsPath = destinationConvertorsRelativePath,
+        commonModulePackagesPaths = commonModulePackagesPaths
+    )
+
+    @TaskAction
+    fun execute() {
+        val logger = java.util.logging.Logger.getGlobal()
+
+        val kspOptionsFile = File("${project.rootProject.projectDir.path}/.kspOptions.json")
+        try {
+            if (kspOptionsFile.exists())
+                kspOptionsFile.delete()
+
+            logger.log(Level.SEVERE, "Log: Creating .kspOptionsFile...")
+
+            kspOptionsFile.createNewFile()
+            kspOptionsFile.apply {
+                this.writeText(
+                    groovy.json.JsonOutput.prettyPrint(
+                        groovy.json.JsonOutput.toJson(kspOptions)
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
 
@@ -47,6 +128,7 @@ abstract class NarratorTask @Inject constructor(@Input val config: NarratorExten
     @get:Input
     @set:Option(option = "overwrite", description = "Whether this task should overwrite existing files")
     var overwrite: Boolean = false
+
     @get:Input
     @set:Option(option = "table", description = "Name of target db table")
     @Optional
@@ -114,28 +196,14 @@ abstract class NarratorTask @Inject constructor(@Input val config: NarratorExten
     private val commonModulePackagesPaths =
         getCommonModulePaths(config.dtoWebPath, config.destinationConfig.packageRelativePath)
 
-    @Internal
-    private val kspOptions = KspOptions(
-        taskName = this.name,
-        tableName = tableName,
-        rootProjectName = project.rootProject.name,
-        destinationDaosPath = destinationDaosRelativePath,
-        destinationDtosPath = destinationDtosRelativePath,
-        destinationConvertorsPath = destinationConvertorsRelativePath,
-        commonModulePackagesPaths = commonModulePackagesPaths
-    )
 
     @Internal
-    private val kspOptionsFile = File("${project.rootProject.projectDir.path}/.kspOptions.json").apply {
-        this.writeText(
-            groovy.json.JsonOutput.prettyPrint(
-                groovy.json.JsonOutput.toJson(kspOptions)
-            )
-        )
-    }
+    private val kspOptionsFile = File("${project.rootProject.projectDir.path}/.kspOptions.json")
 
     @TaskAction
     fun execute() {
+        val logger = java.util.logging.Logger.getGlobal()
+
         try {
             val didCopyDaos = sourceDaosDirectory.copyRecursively(
                 destinationDaosDirectory,
@@ -179,7 +247,8 @@ abstract class NarratorTask @Inject constructor(@Input val config: NarratorExten
                 throw e
             }
         } finally {
-            kspOptionsFile.deleteRecursively()
+            logger.log(Level.SEVERE, "Log: Creating .kspOptionsFile...")
+            kspOptionsFile.delete()
         }
     }
 }
