@@ -1,5 +1,4 @@
 # Narrator
----
 Welcome to Narrator!
 
 ## Overview
@@ -31,15 +30,15 @@ This document is a step-by-step guide on how to use it.
 - In `build.gradle.kts` apply both `Narrator` and `KSP` plugins
   ```
   plugins {  
-      id("com.narbase.narcore.narrator") version("0.1.0")  
+      id("com.narbase.narcore.narrator") version("<version>")  
       id("com.google.devtools.ksp") version("2.0.0-1.0.24")  
   }
   ```
 - In `build.gradle.kts` add the following dependencies in the `dependencies` block
   ```
   dependencies {
-	  implementation("com.narbase.narcore:narrator:0.1.0")  
-	  ksp("com.narbase.narcore:narrator:0.1.0")
+	  implementation("com.narbase.narcore:narrator:<version>")  
+	  ksp("com.narbase.narcore:narrator:<version>")
   }
   ```
 -  In `build.gradle.kts` add the root project path as an option to the KSP processor
